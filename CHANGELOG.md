@@ -7,6 +7,7 @@
 
 *Features*
 * Upgraded NetApp SDK to latest 1.13.0 
+* Upgraded target framework to NET 5.0 
 
 *Bug Fixes*
 * N/A

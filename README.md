@@ -20,7 +20,7 @@ In this sample application we perform the following operations:
   * NFS 4.1 enabled Volume
 * Clean up created resources
 
->Note: the clean up execution is commented out by default, if you want to run this end to end with the clean up, please uncomment related lines at program.cs.
+>Note: The cleanup execution is disabled by default. If you want to run this end to end with the cleanup, please change value of boolean variable 'shouldCleanup' in program.cs
 
 If you don't already have a Microsoft Azure subscription, you can get a FREE trial account [here](http://go.microsoft.com/fwlink/?LinkId=330212).
 

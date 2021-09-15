@@ -50,7 +50,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
             long capacitypoolSize = 4398046511104;  // 4TiB which is minimum size
             string volumeName = "vol01";
             long volumeSize = 107374182400;  // 100GiB - volume minimum size
-            bool cleanUp = false;
+            bool shouldCleanup = false;
 
             //----------------------------------------------------------------------------------------
             // Authenticating using service principal, refer to README.md file for requirement details
@@ -138,7 +138,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
             //------------------------
             // Cleaning up
             //------------------------
-            if (cleanUp)
+            if (shouldCleanup)
             {
                 WriteConsoleMessage("Cleaning up created resources...");
 

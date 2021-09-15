@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
     using Microsoft.Azure.Management.NetApp;
     using Microsoft.Azure.Management.NetApp.Models;
     using static Microsoft.Azure.Management.ANF.Samples.Common.Utils;
+    using static Microsoft.Azure.Management.ANF.Samples.Common.ResourceUriUtils;
 
     class program
     {
@@ -40,16 +41,16 @@ namespace Microsoft.Azure.Management.ANF.Samples
             // Setting variables necessary for resources creation - change these to appropriated values related to your environment
             //---------------------------------------------------------------------------------------------------------------------
             string subscriptionId = "<subscriptionId>";
-            string location = "eastus2";
-            string resourceGroupName = "anf01-rg";
-            string vnetName = "vnet-02";
-            string subnetName = "anf-sn";
-            string vnetResourceGroupName = "anf01-rg";
-            string anfAccountName = "anfaccount03";
+            string location = "westus";
+            string resourceGroupName = "<Resource group name>";            
+            string subnetId = "<Subnet Id>";         
+            string anfAccountName = "account01";
             string capacityPoolName = "Pool01";
             string capacityPoolServiceLevel = "Standard";
             long capacitypoolSize = 4398046511104;  // 4TiB which is minimum size
+            string volumeName = "vol01";
             long volumeSize = 107374182400;  // 100GiB - volume minimum size
+            bool shouldCleanup = false;
 
             //----------------------------------------------------------------------------------------
             // Authenticating using service principal, refer to README.md file for requirement details
@@ -74,6 +75,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
             // Requesting account to be created
             WriteConsoleMessage("Requesting account to be created...");
             var anfAccount = await anfClient.Accounts.CreateOrUpdateAsync(anfAccountBody, resourceGroupName, anfAccountName);
+            await WaitForAnfResource<NetAppAccount>(anfClient, anfAccount.Id);
             WriteConsoleMessage($"\tAccount Resource Id: {anfAccount.Id}");
 
             //-----------------------
@@ -83,7 +85,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
             // Setting up capacity pool body  object
             CapacityPool capacityPoolBody = new CapacityPool()
             {
-                Location = location.ToLower(), // Important: location needs to be lower case
+                Location = location.ToLower(),
                 ServiceLevel = capacityPoolServiceLevel,
                 Size = capacitypoolSize
             };
@@ -91,6 +93,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
             // Creating capacity pool
             WriteConsoleMessage("Requesting capacity pool to be created...");
             var capacityPool = await anfClient.Pools.CreateOrUpdateAsync(capacityPoolBody, resourceGroupName, anfAccount.Name, capacityPoolName);
+            await WaitForAnfResource<CapacityPool>(anfClient, capacityPool.Id);
             WriteConsoleMessage($"\tCapacity Pool Resource Id: {capacityPool.Id}");
 
             //------------------------
@@ -114,10 +117,7 @@ namespace Microsoft.Azure.Management.ANF.Samples
                 }
             };
 
-            // Creating volume body object
-            string subnetId = $"/subscriptions/{subscriptionId}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}/subnets/{subnetName}";
-            string volumeName = $"Vol-{anfAccountName}-{capacityPoolName}";
-
+            // Creating volume body object                   
             Volume volumeBody = new Volume()
             {
                 ExportPolicy = exportPolicies,
@@ -132,28 +132,31 @@ namespace Microsoft.Azure.Management.ANF.Samples
             // Creating NFS 4.1 volume
             WriteConsoleMessage("Requesting volume to be created...");
             var volume = await anfClient.Volumes.CreateOrUpdateAsync(volumeBody, resourceGroupName, anfAccount.Name, ResourceUriUtils.GetAnfCapacityPool(capacityPool.Id), volumeName);
+            await WaitForAnfResource<Volume>(anfClient,volume.Id);
             WriteConsoleMessage($"\tVolume Resource Id: {volume.Id}");
 
             //------------------------
             // Cleaning up
             //------------------------
-            //WriteConsoleMessage("Cleaning up created resources...");
+            if (shouldCleanup)
+            {
+                WriteConsoleMessage("Cleaning up created resources...");
 
-            //WriteConsoleMessage("\tDeleting volume...");
-            //await anfClient.Volumes.DeleteAsync(resourceGroupName, anfAccount.Name, ResourceUriUtils.GetAnfCapacityPool(capacityPool.Id), ResourceUriUtils.GetAnfVolume(volume.Id));
-            //// Adding a final verification if the resource completed deletion since it may have a few secs between ARM the Resource Provider be fully in sync
-            //await WaitForNoAnfResource<Volume>(anfClient, volume.Id);
-            //Utils.WriteConsoleMessage($"\t\tDeleted volume: {volume.Id}");
+                WriteConsoleMessage("\tDeleting volume...");
+                await anfClient.Volumes.DeleteAsync(resourceGroupName, anfAccount.Name, ResourceUriUtils.GetAnfCapacityPool(capacityPool.Id), ResourceUriUtils.GetAnfVolume(volume.Id));
+                await WaitForNoAnfResource<Volume>(anfClient, volume.Id);
+                Utils.WriteConsoleMessage($"\t\tDeleted volume: {volume.Id}");
 
-            //WriteConsoleMessage("\tDeleting capacity pool...");
-            //await anfClient.Pools.DeleteAsync(resourceGroupName, anfAccount.Name, ResourceUriUtils.GetAnfCapacityPool(capacityPool.Id));
-            //await WaitForNoAnfResource<CapacityPool>(anfClient, capacityPool.Id);
-            //Utils.WriteConsoleMessage($"\t\tDeleted capacity pool: {capacityPool.Id}");
+                WriteConsoleMessage("\tDeleting capacity pool...");
+                await anfClient.Pools.DeleteAsync(resourceGroupName, anfAccount.Name, ResourceUriUtils.GetAnfCapacityPool(capacityPool.Id));
+                await WaitForNoAnfResource<CapacityPool>(anfClient, capacityPool.Id);
+                Utils.WriteConsoleMessage($"\t\tDeleted capacity pool: {capacityPool.Id}");
 
-            //WriteConsoleMessage("\tDeleting account...");
-            //await anfClient.Accounts.DeleteAsync(resourceGroupName, anfAccount.Name);
-            //await WaitForNoAnfResource<NetAppAccount>(anfClient, anfAccount.Id);
-            //Utils.WriteConsoleMessage($"\t\tDeleted account: {anfAccount.Id}");
+                WriteConsoleMessage("\tDeleting account...");
+                await anfClient.Accounts.DeleteAsync(resourceGroupName, anfAccount.Name);
+                await WaitForNoAnfResource<NetAppAccount>(anfClient, anfAccount.Id);
+                Utils.WriteConsoleMessage($"\t\tDeleted account: {anfAccount.Id}");
+            }
         }        
     }
 }
